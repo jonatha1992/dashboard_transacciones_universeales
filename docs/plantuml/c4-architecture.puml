@@ -1,0 +1,94 @@
+@startuml
+title C4 Level 1 - System Context
+left to right direction
+skinparam packageStyle rectangle
+
+actor Auditor
+rectangle "Sentinel Compliance Engine\n(Blazor Server /.NET 9)" as System
+database "SQL Server LocalDB" as SqlDb
+rectangle "Browser" as Browser
+
+Auditor --> Browser : Usa dashboard
+Browser --> System : HTTP + SignalR
+System --> SqlDb : EF Core
+
+@enduml
+
+@startuml
+title C4 Level 2 - Containers
+left to right direction
+skinparam packageStyle rectangle
+
+actor Auditor
+database "SQL Server LocalDB" as SqlDb
+
+package "Corvux AML Dashboard" {
+  rectangle "Blazor UI\nPages + Layouts + Components" as BlazorUi
+  rectangle "REST API\nTransactionsController + Swagger" as Api
+  rectangle "Application Services\nTransactionService\nComplianceRuleEngine\nTransactionImportParser\nCountryCoordinateMap" as Services
+  rectangle "Data Layer\nComplianceDbContext" as DataLayer
+  rectangle "Static Assets\napp.css\nTailwind CDN\nLeaflet local\nmap-interop.js" as StaticAssets
+}
+
+Auditor --> BlazorUi : Opera UI
+Auditor --> Api : Swagger / API
+BlazorUi --> Services : DI
+Api --> Services : DI
+Services --> DataLayer : IDbContextFactory
+DataLayer --> SqlDb : CRUD
+BlazorUi --> StaticAssets : CSS / JS / Map
+
+@enduml
+
+@startuml
+title C4 Level 3 - Components
+left to right direction
+skinparam packageStyle rectangle
+
+package "UI Components" {
+  rectangle "MainLayout.razor" as MainLayout
+  rectangle "NavMenu.razor" as NavMenu
+  rectangle "BottomNavBar.razor" as BottomNav
+  rectangle "VistaGeneral.razor" as VistaGeneral
+  rectangle "GestionarTransacciones.razor" as Gestionar
+  rectangle "CargaMasiva.razor" as CargaMasiva
+  rectangle "Reportes.razor" as Reportes
+  rectangle "LeafletMap.razor" as LeafletMap
+}
+
+package "Application Services" {
+  rectangle "TransactionService" as TxSvc
+  rectangle "TransactionImportParser" as Parser
+  rectangle "ComplianceRuleEngine" as RuleEngine
+  rectangle "CountryCoordinateMap" as CountryMap
+}
+
+database "ComplianceDbContext" as Db
+rectangle "map-interop.js\nES module objetivo" as MapInterop
+rectangle "Leaflet.js 1.9.4\nwwwroot/lib/leaflet" as Leaflet
+collections "TransactionMapPoint" as MapPoint
+
+MainLayout --> NavMenu
+MainLayout --> BottomNav
+MainLayout --> VistaGeneral
+MainLayout --> Gestionar
+MainLayout --> CargaMasiva
+MainLayout --> Reportes
+
+VistaGeneral --> TxSvc
+VistaGeneral --> RuleEngine
+VistaGeneral --> MapPoint
+VistaGeneral --> LeafletMap
+LeafletMap --> CountryMap
+LeafletMap --> MapInterop
+MapInterop --> Leaflet
+
+Gestionar --> TxSvc
+CargaMasiva --> Parser
+CargaMasiva --> TxSvc
+Reportes --> TxSvc
+Reportes --> RuleEngine
+
+TxSvc --> Db
+
+@enduml
