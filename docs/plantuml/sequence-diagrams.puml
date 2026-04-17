@@ -1,0 +1,112 @@
+@startuml
+title SD01 - Registrar o editar transaccion
+autonumber
+
+actor Auditor
+participant "GestionarTransacciones.razor" as Page
+participant "EditContext" as EditCtx
+participant "TransactionService" as TxSvc
+participant "ComplianceDbContext" as Db
+
+Auditor -> Page : Completa formulario y confirma
+Page -> EditCtx : OnValidSubmit
+EditCtx -> EditCtx : Valida DataAnnotations
+
+alt Formulario invalido
+  EditCtx --> Page : Errores
+  Page --> Auditor : ValidationSummary
+else Formulario valido
+  Page -> TxSvc : SaveAsync(formModel)
+  TxSvc -> Db : CreateDbContextAsync()
+  TxSvc -> Db : Verificar TransactionId duplicado
+
+  alt ID duplicado
+    Db --> TxSvc : Duplicado
+    TxSvc --> Page : Failure("Ya existe...")
+    Page --> Auditor : Banner de error
+  else Persistencia exitosa
+    TxSvc -> Db : Add o update TransactionRecord
+    TxSvc -> Db : SaveChangesAsync()
+    TxSvc --> Page : Success(...)
+    Page -> TxSvc : GetTransactionsAsync()
+    TxSvc --> Page : Lista actualizada
+    Page --> Auditor : Tabla y KPIs actualizados
+  end
+end
+
+@enduml
+
+@startuml
+title SD02 - Importar lote CSV/XLSX
+autonumber
+
+actor Auditor
+participant "CargaMasiva.razor" as Page
+participant "TransactionImportParser" as Parser
+participant "TransactionService" as TxSvc
+participant "ComplianceDbContext" as Db
+
+Auditor -> Page : Selecciona archivo
+Page -> Parser : ParseAsync(stream, fileName)
+
+alt Archivo invalido
+  Parser --> Page : Errors[]
+  Page --> Auditor : Preview con errores
+else Preview valida
+  Parser --> Page : Rows[]
+  Auditor -> Page : Procesar carga
+  Page -> TxSvc : ImportAsync(stream, fileName)
+  TxSvc -> Parser : ParseAsync(...)
+  TxSvc -> Db : Consultar IDs existentes
+
+  alt Hay errores de negocio
+    TxSvc --> Page : Failure(errors)
+    Page --> Auditor : Carga cancelada
+  else Persistencia en lote
+    TxSvc -> Db : AddRange(transactions)
+    TxSvc -> Db : SaveChangesAsync()
+    TxSvc --> Page : Success(...)
+    Page --> Auditor : Archivo importado
+  end
+end
+
+@enduml
+
+@startuml
+title SD03 - Cargar mapa de riesgo
+autonumber
+
+actor Auditor
+participant "VistaGeneral.razor" as Dashboard
+participant "LeafletMap.razor" as MapComponent
+participant "CountryCoordinateMap" as GeoMap
+participant "map-interop.js\n(ES module objetivo)" as JsModule
+participant "Leaflet.js local" as Leaflet
+
+Auditor -> Dashboard : Abre Vista General
+Dashboard -> Dashboard : Construye TransactionMapPoint[]
+Dashboard -> MapComponent : Markers = points
+MapComponent -> GeoMap : Resolver paises a lat/lng
+GeoMap --> MapComponent : Coordenadas o null
+MapComponent -> JsModule : init(elementId, markers)
+JsModule -> Leaflet : L.map + L.tileLayer + circleMarkers
+Leaflet --> Auditor : Mapa con markers por riesgo
+
+@enduml
+
+@startuml
+title SD04 - Exportar reporte CSV
+autonumber
+
+actor Auditor
+participant "Reportes.razor" as Reports
+participant "IJSRuntime" as Js
+participant Browser
+
+Auditor -> Reports : Click en Exportar CSV
+Reports -> Reports : Construye CSV en memoria
+Reports -> Js : InvokeVoidAsync("corvuxDownloadCsv", csv, fileName)
+Js -> Browser : Blob + anchor download
+Browser --> Auditor : Archivo descargado
+
+@enduml

@@ -1,0 +1,84 @@
+/* _content/Corvux/Components/Shared/BottomNavBar.razor.rz.scp.css */
+[b-z6xjw6sp3p] .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    flex: 1;
+    padding: 0.7rem 0.5rem;
+    color: var(--muted-copy);
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: color 140ms ease;
+    border: none;
+    background: transparent;
+}
+
+[b-z6xjw6sp3p] .bottom-nav-item:hover {
+    color: var(--copy);
+}
+
+[b-z6xjw6sp3p] .bottom-nav-item.active {
+    color: var(--accent);
+}
+
+[b-z6xjw6sp3p] .bottom-nav-item svg {
+    flex-shrink: 0;
+}
+/* _content/Corvux/Components/Shared/LeafletMap.razor.rz.scp.css */
+.leaflet-map-container[b-w0lodaf1fc] {
+    min-height: var(--leaflet-map-min-height, 320px);
+    height: var(--leaflet-map-height, 320px);
+    border-radius: 1.15rem;
+    border: 1px solid rgba(132, 163, 175, 0.12);
+    background:
+        radial-gradient(circle at top, rgba(143, 202, 181, 0.08), transparent 42%),
+        rgba(8, 18, 24, 0.84);
+    overflow: hidden;
+    position: relative;
+    isolation: isolate;
+}
+
+:global(.leaflet-container)[b-w0lodaf1fc] {
+    width: 100%;
+    height: 100%;
+    background: #d5e7ef;
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+}
+
+:global(.leaflet-control-zoom a)[b-w0lodaf1fc] {
+    color: #13242d;
+}
+
+:global(.leaflet-control-attribution)[b-w0lodaf1fc] {
+    font-size: 0.68rem;
+}
+
+:global(.leaflet-popup-content-wrapper)[b-w0lodaf1fc] {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+:global(.leaflet-popup-content)[b-w0lodaf1fc] {
+    margin: 0;
+}
+
+:global(.leaflet-popup-tip)[b-w0lodaf1fc] {
+    display: none;
+}
+
+:global(.corvux-map-popup)[b-w0lodaf1fc] {
+    /* Tailwind classes are applied directly in map-interop.js */
+    width: 260px;
+}
+
+@media (max-width: 720px) {
+    .leaflet-map-container[b-w0lodaf1fc] {
+        min-height: var(--leaflet-map-min-height-mobile, 280px);
+        height: var(--leaflet-map-height-mobile, 280px);
+    }
+}

@@ -1,0 +1,33 @@
+@startuml
+title Corvux AML Dashboard - Use Cases
+left to right direction
+skinparam packageStyle rectangle
+
+actor Auditor
+
+rectangle "Sentinel Compliance Engine" {
+  usecase "UC01\nRegistrar transaccion manual" as UC01
+  usecase "UC02\nEditar transaccion existente" as UC02
+  usecase "UC03\nEliminar transaccion" as UC03
+  usecase "UC04\nImportar lote CSV/XLSX" as UC04
+  usecase "UC05\nVisualizar mapa de riesgo geografico" as UC05
+  usecase "UC06\nConsultar reporte de compliance" as UC06
+  usecase "Validar formato\nde archivo" as VALID
+}
+
+Auditor --> UC01
+Auditor --> UC02
+Auditor --> UC03
+Auditor --> UC04
+Auditor --> UC05
+Auditor --> UC06
+UC04 ..> VALID : <<include>>
+
+note right of UC05
+Mapa objetivo:
+- Leaflet 1.9.4 local
+- JS module
+- markers por riesgo
+end note
+
+@enduml

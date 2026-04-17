@@ -1,0 +1,113 @@
+@startuml
+title AD01 - Registrar transaccion manual
+start
+:Completar formulario;
+:Validar DataAnnotations;
+if (Formulario valido?) then (si)
+  :TransactionService.SaveAsync;
+  if (TransactionId duplicado?) then (si)
+    :Mostrar error;
+  else (no)
+    :Persistir TransactionRecord;
+    :Recargar tabla y KPIs;
+  endif
+else (no)
+  :Mostrar errores de validacion;
+endif
+stop
+@enduml
+
+@startuml
+title AD02 - Editar transaccion
+start
+:Seleccionar fila;
+:Precargar TransactionFormModel;
+:Modificar datos;
+:Guardar cambios;
+if (Formulario valido?) then (si)
+  :TransactionService.SaveAsync;
+  if (Registro existe?) then (si)
+    if (Nuevo ID colisiona?) then (si)
+      :Mostrar error;
+    else (no)
+      :Actualizar entidad;
+      :Refrescar tabla y KPIs;
+    endif
+  else (no)
+    :Mostrar registro no encontrado;
+  endif
+else (no)
+  :Mostrar errores;
+endif
+stop
+@enduml
+
+@startuml
+title AD03 - Eliminar transaccion
+start
+:Click en Eliminar;
+:TransactionService.DeleteAsync;
+if (Registro existe?) then (si)
+  :Eliminar fila;
+  :Recargar tabla;
+else (no)
+  :Mostrar mensaje informativo;
+endif
+stop
+@enduml
+
+@startuml
+title AD04 - Importar lote CSV/XLSX
+start
+:Seleccionar archivo;
+:Parsear archivo;
+if (Formato valido?) then (si)
+  :Construir preview;
+  if (Hay errores?) then (si)
+    :Cancelar carga;
+    :Mostrar errores por fila;
+  else (no)
+    :TransactionService.ImportAsync;
+    if (IDs duplicados o reglas invalidas?) then (si)
+      :Mostrar errores de negocio;
+    else (no)
+      :Persistir lote;
+      :Confirmar carga;
+    endif
+  endif
+else (no)
+  :Mostrar formato no soportado;
+endif
+stop
+@enduml
+
+@startuml
+title AD05 - Visualizar mapa de riesgo geografico
+start
+:Cargar transacciones en VistaGeneral;
+:Evaluar compliance;
+:Construir TransactionMapPoint[];
+:Resolver coordenadas con CountryCoordinateMap;
+if (Hay puntos validos?) then (si)
+  :Importar JS module;
+  :Inicializar Leaflet;
+  :Renderizar markers rojo/amarillo/verde;
+else (no)
+  :Mostrar mapa vacio;
+endif
+stop
+@enduml
+
+@startuml
+title AD06 - Consultar reporte de compliance
+start
+:Cargar transacciones;
+:Calcular breakdown de compliance;
+:Mostrar KPIs y tablas;
+if (Solicita exportar CSV?) then (si)
+  :Serializar CSV;
+  :Descargar via JS;
+else (no)
+endif
+stop
+@enduml
