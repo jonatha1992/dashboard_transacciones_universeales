@@ -1,0 +1,124 @@
+@page "/reportes"
+@rendermode InteractiveServer
+@using Corvux.Services
+@using Corvux.Models
+@using Microsoft.JSInterop
+
+@inject TransactionService TransactionService
+@inject ComplianceRuleEngine ComplianceEngine
+@inject IJSRuntime JS
+
+<h1 class="page-title">📋 Reportes de Compliance</h1>
+
+<!-- Resumen -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-value">@transactions.Count</div>
+        <div class="kpi-label">Total Operaciones</div>
+    </div>
+    <div class="kpi-card kpi-warning">
+        <div class="kpi-value">@requiresDeclarationCount</div>
+        <div class="kpi-label">Requieren Declaración</div>
+    </div>
+    <div class="kpi-card kpi-danger">
+        <div class="kpi-value">@blockedCount</div>
+        <div class="kpi-label">Bloqueadas</div>
+    </div>
+    <div class="kpi-card kpi-info">
+        <div class="kpi-value">@totalFees.ToString("C2")</div>
+        <div class="kpi-label">Tasas Administrativas</div>
+    </div>
+</div>
+
+<!-- Acciones de exportación -->
+<div class="card section-card">
+    <div class="card-header tw-flex tw-justify-between tw-items-center">
+        <h2>📊 Reporte Detallado</h2>
+        <button class="btn btn-primary" @onclick="ExportCsv">📥 Exportar CSV</button>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table data-table">
+            <thead>
+                <tr>
+                    <th>ID Transacción</th>
+                    <th>Monto (USD)</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th>Declaración</th>
+                    <th>Bloqueada</th>
+                    <th>Tasa Admin.</th>
+                    <th>Motivo Bloqueo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in transactions)
+                {
+                    var eval = ComplianceEngine.Evaluate(t.AmountUsd, t.OriginCountry, t.DestinationCountry);
+                    <tr class="@(eval.IsBlocked ? "row-blocked" : eval.RequiresFundsDeclaration ? "row-warning" : "")">
+                        <td><code>@t.TransactionId</code></td>
+                        <td>@t.AmountUsd.ToString("N2")</td>
+                        <td>@t.OriginCountry</td>
+                        <td>@t.DestinationCountry</td>
+                        <td>@(eval.RequiresFundsDeclaration ? "⚠️ Sí" : "—")</td>
+                        <td>@(eval.IsBlocked ? "🚫 Sí" : "—")</td>
+                        <td>@(eval.AdministrativeFee > 0 ? eval.AdministrativeFee.ToString("N2") : "—")</td>
+                        <td>@(eval.BlockReason ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (transactions.Count == 0)
+        {
+            <div class="empty-state">
+                <p>No hay transacciones para reportar.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<TransactionRecord> transactions = new();
+    private int requiresDeclarationCount;
+    private int blockedCount;
+    private decimal totalFees;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        transactions = await TransactionService.GetTransactionsAsync();
+
+        requiresDeclarationCount = 0;
+        blockedCount = 0;
+        totalFees = 0;
+
+        foreach (var t in transactions)
+        {
+            var eval = ComplianceEngine.Evaluate(t.AmountUsd, t.OriginCountry, t.DestinationCountry);
+            if (eval.RequiresFundsDeclaration) requiresDeclarationCount++;
+            if (eval.IsBlocked) blockedCount++;
+            totalFees += eval.AdministrativeFee;
+        }
+    }
+
+    private async Task ExportCsv()
+    {
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("TransactionId,AmountUsd,OriginCountry,DestinationCountry,RequiresDeclaration,IsBlocked,AdministrativeFee,BlockReason");
+
+        foreach (var t in transactions)
+        {
+            var eval = ComplianceEngine.Evaluate(t.AmountUsd, t.OriginCountry, t.DestinationCountry);
+            csv.AppendLine($"\"{t.TransactionId}\",{t.AmountUsd},{t.OriginCountry},{t.DestinationCountry},{eval.RequiresFundsDeclaration},{eval.IsBlocked},{eval.AdministrativeFee},\"{eval.BlockReason ?? ""}\"");
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+        var base64 = Convert.ToBase64String(bytes);
+
+        await JS.InvokeVoidAsync("downloadFile", "reporte-compliance.csv", base64);
+    }
+}

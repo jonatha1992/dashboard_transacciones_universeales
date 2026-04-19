@@ -1,0 +1,17 @@
+@inherits LayoutComponentBase
+
+<div class="app-layout">
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-icon">🛡️</span>
+            <span class="brand-text">Sentinel</span>
+        </div>
+        <NavMenu />
+    </nav>
+
+    <main class="main-content">
+        @Body
+    </main>
+
+    <Shared.BottomNavBar />
+</div>

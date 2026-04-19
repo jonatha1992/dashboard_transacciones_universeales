@@ -1,0 +1,192 @@
+@page "/transacciones"
+@rendermode InteractiveServer
+@using Corvux.Services
+@using Corvux.Models
+
+@inject TransactionService TransactionService
+@inject ComplianceRuleEngine ComplianceEngine
+
+<h1 class="page-title">💳 Gestionar Transacciones</h1>
+
+<!-- Formulario CRUD -->
+<div class="card section-card">
+    <div class="card-header">
+        <h2>@(editingId.HasValue ? "✏️ Editar Transacción" : "➕ Nueva Transacción")</h2>
+    </div>
+    <div class="card-body">
+        <EditForm Model="form" OnValidSubmit="HandleSubmit" FormName="transactionForm">
+            <DataAnnotationsValidator />
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="txId">ID de Transacción</label>
+                    <InputText id="txId" @bind-Value="form.TransactionId" class="form-control" />
+                    <ValidationMessage For="@(() => form.TransactionId)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">Monto (USD)</label>
+                    <InputNumber id="amount" @bind-Value="form.AmountUsd" class="form-control" />
+                    <ValidationMessage For="@(() => form.AmountUsd)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="origin">País de Origen</label>
+                    <InputText id="origin" @bind-Value="form.OriginCountry" class="form-control" />
+                    <ValidationMessage For="@(() => form.OriginCountry)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="dest">País de Destino</label>
+                    <InputText id="dest" @bind-Value="form.DestinationCountry" class="form-control" />
+                    <ValidationMessage For="@(() => form.DestinationCountry)" />
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    @(editingId.HasValue ? "💾 Guardar Cambios" : "➕ Registrar")
+                </button>
+                @if (editingId.HasValue)
+                {
+                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancelar</button>
+                }
+            </div>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3">@message</div>
+        }
+    </div>
+</div>
+
+<!-- Tabla de transacciones -->
+<div class="card section-card">
+    <div class="card-header">
+        <h2>📃 Transacciones</h2>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table data-table">
+            <thead>
+                <tr>
+                    <th>ID Transacción</th>
+                    <th>Monto (USD)</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in transactions)
+                {
+                    var eval = ComplianceEngine.Evaluate(t.AmountUsd, t.OriginCountry, t.DestinationCountry);
+                    <tr>
+                        <td><code>@t.TransactionId</code></td>
+                        <td>@t.AmountUsd.ToString("N2")</td>
+                        <td>@t.OriginCountry</td>
+                        <td>@t.DestinationCountry</td>
+                        <td>
+                            @if (eval.IsBlocked)
+                            {
+                                <span class="badge badge-blocked">🚫 Bloqueada</span>
+                            }
+                            else if (eval.RequiresFundsDeclaration)
+                            {
+                                <span class="badge badge-declaration">⚠️ Declaración</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-approved">✅ Aprobada</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEdit(t)">✏️</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => HandleDelete(t.Id)">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (transactions.Count == 0)
+        {
+            <div class="empty-state">
+                <p>No hay transacciones registradas aún.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private TransactionFormModel form = new();
+    private List<TransactionRecord> transactions = new();
+    private int? editingId;
+    private string? message;
+    private bool isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTransactions();
+    }
+
+    private async Task LoadTransactions()
+    {
+        transactions = await TransactionService.GetTransactionsAsync();
+    }
+
+    private async Task HandleSubmit()
+    {
+        var result = await TransactionService.SaveAsync(form, editingId);
+        if (result.Success)
+        {
+            message = editingId.HasValue ? "Transacción actualizada exitosamente" : "Transacción registrada exitosamente";
+            isError = false;
+            CancelEdit();
+            await LoadTransactions();
+        }
+        else
+        {
+            message = result.Error;
+            isError = true;
+        }
+    }
+
+    private void StartEdit(TransactionRecord t)
+    {
+        editingId = t.Id;
+        form = new TransactionFormModel
+        {
+            TransactionId = t.TransactionId,
+            AmountUsd = t.AmountUsd,
+            OriginCountry = t.OriginCountry,
+            DestinationCountry = t.DestinationCountry
+        };
+        message = null;
+    }
+
+    private void CancelEdit()
+    {
+        editingId = null;
+        form = new TransactionFormModel();
+        message = null;
+    }
+
+    private async Task HandleDelete(int id)
+    {
+        var result = await TransactionService.DeleteAsync(id);
+        if (result.Success)
+        {
+            if (editingId == id) CancelEdit();
+            message = "Transacción eliminada";
+            isError = false;
+            await LoadTransactions();
+        }
+        else
+        {
+            message = result.Error;
+            isError = true;
+        }
+    }
+}
