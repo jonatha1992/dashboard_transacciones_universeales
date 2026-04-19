@@ -1,0 +1,162 @@
+@page "/carga-masiva"
+@rendermode InteractiveServer
+@using Corvux.Services
+@using Corvux.Models
+
+@inject TransactionService TransactionService
+
+<h1 class="page-title">📤 Carga Masiva</h1>
+
+<div class="card section-card">
+    <div class="card-header">
+        <h2>📁 Importar Archivo CSV/XLSX</h2>
+    </div>
+    <div class="card-body">
+        <div class="upload-zone">
+            <InputFile OnChange="HandleFileSelected" accept=".csv,.xlsx" class="form-control" />
+            <p class="upload-hint">Formatos aceptados: CSV, XLSX. Columnas obligatorias: TransactionId, AmountUsd, OriginCountry, DestinationCountry</p>
+        </div>
+
+        @if (selectedFile != null)
+        {
+            <div class="file-info mt-3">
+                <p><strong>Archivo:</strong> @selectedFile.Name (@FormatSize(selectedFile.Size))</p>
+                <button class="btn btn-primary" @onclick="HandleImport" disabled="@isImporting">
+                    @if (isImporting)
+                    {
+                        <span>⏳ Importando...</span>
+                    }
+                    else
+                    {
+                        <span>📤 Importar Lote</span>
+                    }
+                </button>
+            </div>
+        }
+
+        @if (importResult != null)
+        {
+            <div class="mt-3">
+                @if (importResult.Success)
+                {
+                    <div class="alert alert-success">
+                        ✅ Importación exitosa: @importResult.ImportedCount transacciones importadas.
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-danger">
+                        ❌ La importación falló. Se encontraron @importResult.Errors.Count errores:
+                    </div>
+                    <div class="error-list">
+                        <table class="table data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fila</th>
+                                    <th>Campo</th>
+                                    <th>Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var err in importResult.Errors)
+                                {
+                                    <tr>
+                                        <td>@err.Row</td>
+                                        <td><code>@err.Field</code></td>
+                                        <td>@err.Message</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card section-card">
+    <div class="card-header">
+        <h2>ℹ️ Formato Esperado</h2>
+    </div>
+    <div class="card-body">
+        <p>El archivo debe contener las siguientes columnas (se aceptan aliases en español e inglés):</p>
+        <table class="table data-table">
+            <thead>
+                <tr>
+                    <th>Columna</th>
+                    <th>Aliases Aceptados</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>TransactionId</code></td>
+                    <td>ID, transaction_id</td>
+                    <td>Identificador único (max 40 caracteres)</td>
+                </tr>
+                <tr>
+                    <td><code>AmountUsd</code></td>
+                    <td>Amount, amount_usd, Monto</td>
+                    <td>Monto en dólares (decimal)</td>
+                </tr>
+                <tr>
+                    <td><code>OriginCountry</code></td>
+                    <td>Origin, origin_country, País Origen</td>
+                    <td>País de origen de la transacción</td>
+                </tr>
+                <tr>
+                    <td><code>DestinationCountry</code></td>
+                    <td>Destination, destination_country, País Destino</td>
+                    <td>País de destino de la transacción</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p class="mt-2">Podés usar el archivo de ejemplo en <code>Samples/transactions-sample.csv</code></p>
+    </div>
+</div>
+
+@code {
+    private IBrowserFile? selectedFile;
+    private TransactionImportExecutionResult? importResult;
+    private bool isImporting;
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        importResult = null;
+    }
+
+    private async Task HandleImport()
+    {
+        if (selectedFile == null) return;
+
+        isImporting = true;
+        importResult = null;
+
+        try
+        {
+            using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+
+            importResult = await TransactionService.ImportAsync(ms, selectedFile.Name);
+        }
+        catch (Exception ex)
+        {
+            importResult = new TransactionImportExecutionResult(false, 0,
+                [new ImportError(0, "File", $"Error inesperado: {ex.Message}")]);
+        }
+        finally
+        {
+            isImporting = false;
+        }
+    }
+
+    private static string FormatSize(long bytes) =>
+        bytes < 1024 ? $"{bytes} B" :
+        bytes < 1024 * 1024 ? $"{bytes / 1024.0:F1} KB" :
+        $"{bytes / (1024.0 * 1024.0):F1} MB";
+}

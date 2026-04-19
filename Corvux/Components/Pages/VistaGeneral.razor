@@ -1,0 +1,140 @@
+@page "/"
+@rendermode InteractiveServer
+@using Corvux.Services
+@using Corvux.Models
+
+@inject TransactionService TransactionService
+@inject ComplianceRuleEngine ComplianceEngine
+
+<h1 class="page-title">📊 Vista General</h1>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-value">@transactions.Count</div>
+        <div class="kpi-label">Total Operaciones</div>
+    </div>
+    <div class="kpi-card kpi-warning">
+        <div class="kpi-value">@requiresDeclarationCount</div>
+        <div class="kpi-label">Requieren Declaración</div>
+    </div>
+    <div class="kpi-card kpi-danger">
+        <div class="kpi-value">@blockedCount</div>
+        <div class="kpi-label">Bloqueadas</div>
+    </div>
+    <div class="kpi-card kpi-info">
+        <div class="kpi-value">@totalFees.ToString("C2")</div>
+        <div class="kpi-label">Tasas Administrativas</div>
+    </div>
+</div>
+
+<!-- Mapa Geográfico -->
+<div class="card section-card">
+    <div class="card-header">
+        <h2>🗺️ Exposición Geográfica</h2>
+    </div>
+    <div class="card-body">
+        <Shared.LeafletMap Points="@mapPoints" />
+    </div>
+</div>
+
+<!-- Tabla de transacciones -->
+<div class="card section-card">
+    <div class="card-header">
+        <h2>📃 Transacciones Recientes</h2>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table data-table">
+            <thead>
+                <tr>
+                    <th>ID Transacción</th>
+                    <th>Monto (USD)</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in transactions)
+                {
+                    var eval = ComplianceEngine.Evaluate(t.AmountUsd, t.OriginCountry, t.DestinationCountry);
+                    <tr>
+                        <td><code>@t.TransactionId</code></td>
+                        <td>@t.AmountUsd.ToString("N2")</td>
+                        <td>@t.OriginCountry</td>
+                        <td>@t.DestinationCountry</td>
+                        <td>
+                            @if (eval.IsBlocked)
+                            {
+                                <span class="badge badge-blocked">🚫 Bloqueada</span>
+                            }
+                            else if (eval.RequiresFundsDeclaration)
+                            {
+                                <span class="badge badge-declaration">⚠️ Declaración</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-approved">✅ Aprobada</span>
+                            }
+                        </td>
+                        <td>@t.CreatedAtUtc.ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (transactions.Count == 0)
+        {
+            <div class="empty-state">
+                <p>No hay transacciones registradas. Usa la sección de <a href="transacciones">Gestionar Transacciones</a> o <a href="carga-masiva">Carga Masiva</a> para agregar datos.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<TransactionRecord> transactions = new();
+    private List<TransactionMapPoint> mapPoints = new();
+    private int requiresDeclarationCount;
+    private int blockedCount;
+    private decimal totalFees;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        transactions = await TransactionService.GetTransactionsAsync();
+
+        requiresDeclarationCount = 0;
+        blockedCount = 0;
+        totalFees = 0;
+        mapPoints = new List<TransactionMapPoint>();
+
+        foreach (var t in transactions)
+        {
+            var eval = ComplianceEngine.Evaluate(t.AmountUsd, t.OriginCountry, t.DestinationCountry);
+            if (eval.RequiresFundsDeclaration) requiresDeclarationCount++;
+            if (eval.IsBlocked) blockedCount++;
+            totalFees += eval.AdministrativeFee;
+
+            var color = eval.IsBlocked ? "#ff8d7f" : eval.RequiresFundsDeclaration ? "#ffd089" : "#8bf0a0";
+            var label = $"{t.TransactionId}: ${t.AmountUsd:N2}";
+
+            AddMapPoint(t.OriginCountry, label + " (origen)", color);
+            AddMapPoint(t.DestinationCountry, label + " (destino)", color);
+        }
+    }
+
+    private void AddMapPoint(string country, string label, string color)
+    {
+        var coords = CountryCoordinateMap.GetCoordinates(country);
+        if (coords.HasValue)
+        {
+            mapPoints.Add(new TransactionMapPoint(coords.Value.Lat, coords.Value.Lng, country, label, color));
+        }
+    }
+}

@@ -1,0 +1,57 @@
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+
+<div id="leaflet-map-container" style="height: 400px; width: 100%; border-radius: 12px; overflow: hidden;"></div>
+
+@code {
+    [Parameter] public List<Corvux.Models.TransactionMapPoint> Points { get; set; } = new();
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private bool _initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("corvuxMap.init", "leaflet-map-container");
+            _initialized = true;
+            await UpdateMarkers();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_initialized)
+        {
+            await UpdateMarkers();
+        }
+    }
+
+    private async Task UpdateMarkers()
+    {
+        if (Points.Count > 0)
+        {
+            await JS.InvokeVoidAsync("corvuxMap.updateMarkers", Points.Select(p => new
+            {
+                lat = p.Lat,
+                lng = p.Lng,
+                country = p.Country,
+                label = p.Label,
+                color = p.Color
+            }));
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_initialized)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("corvuxMap.destroy");
+            }
+            catch (JSDisconnectedException) { }
+        }
+    }
+}

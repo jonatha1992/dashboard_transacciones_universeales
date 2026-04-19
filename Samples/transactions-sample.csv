@@ -1,0 +1,11 @@
+TransactionId,AmountUsd,OriginCountry,DestinationCountry
+TX-001,5000.00,Argentina,Brasil
+TX-002,12500.50,Estados Unidos,México
+TX-003,75000.00,España,Francia
+TX-004,3200.00,Chile,Colombia
+TX-005,15000.00,Iran,Alemania
+TX-006,8900.00,Japón,Corea del Sur
+TX-007,55000.00,Reino Unido,Suiza
+TX-008,1200.00,Uruguay,Paraguay
+TX-009,25000.00,Australia,Singapur
+TX-010,60000.00,Canadá,Corea del Norte
