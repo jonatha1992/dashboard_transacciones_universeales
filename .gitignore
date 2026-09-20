@@ -1,0 +1,35 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+
+# Test artifacts
+TestResults/
+[Tt]est[Rr]esult*/
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Secrets / local config
+appsettings.Development.json
+appsettings.Local.json
+.env
+.env.local
+
+# Agent / tooling local state
+.claude/settings.local.json
+.playwright-mcp/
+firebase-debug.log
+*.log
+
+# OS
+desktop.ini
+Thumbs.db
+.DS_Store
