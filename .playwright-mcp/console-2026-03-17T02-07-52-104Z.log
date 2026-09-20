@@ -1,2 +1,0 @@
-[     223ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/?plugins=forms,container-queries:63
-[    3091ms] [ERROR] WebSocket connection to 'wss://localhost:50536/' failed: Error in connection establishment: net::ERR_CERT_AUTHORITY_INVALID @ http://localhost:5180/_framework/aspnetcore-browser-refresh.js:349

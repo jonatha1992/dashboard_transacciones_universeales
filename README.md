@@ -378,3 +378,19 @@ dotnet build Corvux/Corvux.csproj
 ## 📝 Licencia
 
 Este proyecto fue desarrollado como parte del **Corvux Challenge** — desafío técnico de desarrollo de un dashboard de compliance AML.
+
+## Configuration
+
+`SentinelAI:APIKey` is intentionally empty in `appsettings.json`. Provide it at
+runtime through the environment instead of committing it:
+
+```bash
+# Linux / macOS
+export SentinelAI__APIKey="your-key"
+
+# Windows (PowerShell)
+$env:SentinelAI__APIKey = "your-key"
+```
+
+ASP.NET Core maps the `__` separator to the configuration hierarchy, so the
+environment variable overrides the empty value without any code change.
