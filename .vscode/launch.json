@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET: Corvux (F5)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build Corvux",
+      "program": "${workspaceFolder}/Corvux/bin/Debug/net9.0/Corvux.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/Corvux",
+      "env": { "ASPNETCORE_ENVIRONMENT": "Development" },
+      "console": "internalConsole",
+      "launchSettingsProfile": "http"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "restore Corvux", "type": "process", "command": "dotnet", "args": ["restore", "Corvux/Corvux.csproj"], "problemMatcher": "$msCompile" },
+    { "label": "build Corvux", "type": "process", "command": "dotnet", "args": ["build", "Corvux/Corvux.csproj", "--no-restore"], "dependsOn": "restore Corvux", "problemMatcher": "$msCompile", "group": "build" },
+    { "label": "run Corvux", "type": "process", "command": "dotnet", "args": ["run", "--project", "Corvux/Corvux.csproj", "--launch-profile", "http"], "problemMatcher": "$msCompile" },
+    { "label": "test Corvux", "type": "process", "command": "dotnet", "args": ["test", "Corvux.Tests/Corvux.Tests.csproj", "--verbosity", "minimal"], "problemMatcher": "$msCompile", "group": "test" }
+  ]
+}
